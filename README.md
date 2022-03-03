@@ -18,7 +18,6 @@ If you use this implementation or parts of it please cite:
  http://ceur-ws.org/Vol-1390/visceralISBI15-4.pdf
  
 ## Installation
-Current version requires an Unix-based system.
 ```
 pip install git+https://github.com/wiktorowski211/deeds-registration
 ```
