@@ -37,3 +37,14 @@ moved = registration(fixed, moving)
 Input images must:
 - have the same dimensions,
 - be a SimpleITK image object.
+
+## Development
+Build:
+```
+python setup.py build_ext --inplace
+```
+
+Test:
+```
+python -m unittest 
+```

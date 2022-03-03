@@ -22,7 +22,6 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/wiktorowski211/deeds-registration",
     packages=setuptools.find_packages(exclude=("tests",)),
-    package_data={"deeds.libs": ["*"]},
     ext_modules=cythonize(extensions),
     classifiers=[
         "Programming Language :: Python :: 3",

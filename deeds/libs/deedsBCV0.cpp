@@ -45,11 +45,14 @@ struct mind_data
 #include "MINDSSCbox.h"
 #include "dataCostD.h"
 
-int deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float alpha, int levels)
+void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float alpha, int levels, bool verbose)
 {
     vector<int> grid_spacing = {8, 7, 6, 5, 4};
     vector<int> search_radius = {8, 7, 6, 5, 4};
     vector<int> quantisation = {5, 4, 3, 2, 1};
+
+    if (!verbose)
+        cout.rdbuf(nullptr);
 
     cout << "Starting registration\n";
     cout << "=============================================================\n";
@@ -87,11 +90,6 @@ int deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float al
     X[2 + 8] = 1.0f;
     X[3 + 12] = 1.0f;
 
-    for (int i = 0; i < 4; i++)
-    {
-        printf("%+4.3f | %+4.3f | %+4.3f | %+4.3f \n", X[i], X[i + 4], X[i + 8], X[i + 12]); // X[i],X[i+4],X[i+8],X[i+12]);
-    }
-
     // PATCH-RADIUS FOR MIND/SSC DESCRIPTORS
 
     vector<int> mind_step;
@@ -99,7 +97,8 @@ int deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float al
     {
         mind_step.push_back(floor(0.5f * (float)quantisation[i] + 1.0f));
     }
-    printf("MIND STEPS, %d, %d, %d, %d, %d \n", mind_step[0], mind_step[1], mind_step[2], mind_step[3], mind_step[4]);
+
+    cout << "MIND STEPS: " << mind_step[0] << " " << mind_step[1] << " " << mind_step[2] << " " << mind_step[3] << " " << mind_step[4] << endl;
 
     int step1;
     int hw1;
@@ -307,7 +306,5 @@ int deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float al
 
     cout << "SSD before registration: " << SSD0 << " and after " << SSD1 << "\n";
 
-    cout << "Finished. Total time: " << timeALL << " sec. (" << timeDataSmooth << " sec. for MIND+data+reg+trans)\n";
-
-    return 0;
+    cout << "Finished. Total time: " << timeALL << " sec. (" << timeDataSmooth << " sec. for MIND+data+reg+trans)" << endl;
 }
