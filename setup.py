@@ -1,13 +1,21 @@
 
 import setuptools
 import numpy
+import platform
 
 from Cython.Build import cythonize
 from distutils.extension import Extension
 
+if platform.system() == 'Windows':
+    extra_compile_args = ["/Ox", "/openmp", "/arch:AVX2"]
+    extra_link_args = []
+else:
+    extra_compile_args = ["-O3", "-fopenmp", "-mavx2", "-msse4.2", "-std=c++11"]
+    extra_link_args = ['-fopenmp']
+
 sourcefiles = ['deeds/registration.pyx', 'deeds/libs/deedsBCV0.cpp']
 extensions = [Extension(name='deeds.registration', sources=sourcefiles, language="c++",
-                        include_dirs=[numpy.get_include()], extra_compile_args=["-O3", "-fopenmp", "-mavx2", "-msse4.2", "-std=c++11"], extra_link_args=['-fopenmp'])]
+                        include_dirs=[numpy.get_include()], extra_compile_args=extra_compile_args, extra_link_args=extra_link_args)]
 
 with open("README.md", "r", encoding='utf-8') as fh:
     long_description = fh.read()

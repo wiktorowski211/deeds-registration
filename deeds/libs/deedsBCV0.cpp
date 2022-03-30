@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <math.h>
-#include <sys/time.h>
 #include <vector>
 #include <algorithm>
 #include <numeric>
@@ -9,11 +8,10 @@
 #include <functional>
 #include <string.h>
 #include <sstream>
-#include <x86intrin.h>
-#include <pthread.h>
-#include <thread>
 #include <cstddef>
 #include <sys/stat.h>
+#include <chrono>
+#include <bitset>
 
 using namespace std;
 
@@ -57,10 +55,6 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
     cout << "Starting registration\n";
     cout << "=============================================================\n";
 
-    // READ IMAGES and INITIALISE ARRAYS
-
-    timeval time1, time2, time1a, time2a;
-
     RAND_SAMPLES = 1; // fixed/efficient random sampling strategy
 
     image_m = m;
@@ -100,9 +94,8 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
 
     cout << "MIND STEPS: " << mind_step[0] << " " << mind_step[1] << " " << mind_step[2] << " " << mind_step[3] << " " << mind_step[4] << endl;
 
-    int step1;
-    int hw1;
-    float quant1;
+    int step1 = 0, hw1 = 0;
+    float quant1 = 0.0;
 
     // set initial flow-fields to 0; i indicates backward (inverse) transform
     // u is in x-direction (2nd dimension), v in y-direction (1st dim) and w in z-direction (3rd dim)
@@ -115,8 +108,9 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
         vx[i] = 0.0;
         wx[i] = 0.0;
     }
-    int m2, n2, o2, sz2;
-    int m1, n1, o1, sz1;
+    int m2 = 0, n2 = 0, o2 = 0, sz2 = 0;
+    int m1 = 0, n1 = 0, o1 = 0, sz1 = 0;
+
     m2 = m / grid_spacing[0];
     n2 = n / grid_spacing[0];
     o2 = o / grid_spacing[0];
@@ -144,9 +138,8 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
     uint64_t *im1b_mind = new uint64_t[m * n * o];
     uint64_t *warped_mind = new uint64_t[m * n * o];
 
-    gettimeofday(&time1a, NULL);
-    float timeDataSmooth = 0;
-    //==========================================================================================
+    auto time1a = chrono::steady_clock::now();
+
     //==========================================================================================
 
     for (int level = 0; level < levels; level++)
@@ -163,11 +156,14 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
 
         if (level == 0 | prev != curr)
         {
-            gettimeofday(&time1, NULL);
+            auto time1 = chrono::steady_clock::now();
+
             descriptor(im1_mind, warped0, m, n, o, mind_step[level]); // im1 affine
             descriptor(im1b_mind, im1b, m, n, o, mind_step[level]);
-            gettimeofday(&time2, NULL);
-            timeMIND += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+
+            auto time2 = chrono::steady_clock::now();
+
+            timeMIND += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
         }
 
         step1 = grid_spacing[level];
@@ -192,7 +188,8 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
         cout << "==========================================================\n";
 
         // FULL-REGISTRATION FORWARDS
-        gettimeofday(&time1, NULL);
+        auto time1 = chrono::steady_clock::now();
+
         upsampleDeformationsCL(u0, v0, w0, u1, v1, w1, m1, n1, o1, m2, n2, o2);
         upsampleDeformationsCL(ux, vx, wx, u0, v0, w0, m, n, o, m1, n1, o1);
         // float dist=landmarkDistance(ux,vx,wx,m,n,o,distsmm,casenum);
@@ -200,63 +197,69 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
         u1 = new float[sz1];
         v1 = new float[sz1];
         w1 = new float[sz1];
-        gettimeofday(&time2, NULL);
-        timeTrans += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+
+        auto time2 = chrono::steady_clock::now();
+
+        timeTrans += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
         cout << "T" << flush;
-        gettimeofday(&time1, NULL);
+
+        time1 = chrono::steady_clock::now();
+
         descriptor(warped_mind, warped1, m, n, o, mind_step[level]);
 
-        gettimeofday(&time2, NULL);
-        timeMIND += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
-        cout << "M" << flush;
-        gettimeofday(&time1, NULL);
-        dataCostCL((unsigned long *)im1b_mind, (unsigned long *)warped_mind, costall, m, n, o, len3, step1, hw1, quant1, alpha, RAND_SAMPLES);
-        gettimeofday(&time2, NULL);
+        time2 = chrono::steady_clock::now();
 
-        timeData += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        timeMIND += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
+        cout << "M" << flush;
+
+        time1 = chrono::steady_clock::now();
+        dataCostCL(im1b_mind, warped_mind, costall, m, n, o, len3, step1, hw1, quant1, alpha, RAND_SAMPLES);
+        time2 = chrono::steady_clock::now();
+
+        timeData += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
         cout << "D" << flush;
-        gettimeofday(&time1, NULL);
+        time1 = chrono::steady_clock::now();
         primsGraph(im1b, ordered, parents, edgemst, step1, m, n, o);
         regularisationCL(costall, u0, v0, w0, u1, v1, w1, hw1, step1, quant1, ordered, parents, edgemst);
-        gettimeofday(&time2, NULL);
-        timeSmooth += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        time2 = chrono::steady_clock::now();
+        timeSmooth += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
         cout << "S" << flush;
 
         // FULL-REGISTRATION BACKWARDS
-        gettimeofday(&time1, NULL);
+        time1 = chrono::steady_clock::now();
         upsampleDeformationsCL(u0, v0, w0, u1i, v1i, w1i, m1, n1, o1, m2, n2, o2);
         upsampleDeformationsCL(ux, vx, wx, u0, v0, w0, m, n, o, m1, n1, o1);
         warpImageCL(warped1, im1b, warped0, ux, vx, wx);
         u1i = new float[sz1];
         v1i = new float[sz1];
         w1i = new float[sz1];
-        gettimeofday(&time2, NULL);
-        timeTrans += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        time2 = chrono::steady_clock::now();
+        timeTrans += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
         cout << "T" << flush;
-        gettimeofday(&time1, NULL);
+        time1 = chrono::steady_clock::now();
         descriptor(warped_mind, warped1, m, n, o, mind_step[level]);
 
-        gettimeofday(&time2, NULL);
-        timeMIND += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        time2 = chrono::steady_clock::now();
+        timeMIND += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
         cout << "M" << flush;
-        gettimeofday(&time1, NULL);
-        dataCostCL((unsigned long *)im1_mind, (unsigned long *)warped_mind, costall, m, n, o, len3, step1, hw1, quant1, alpha, RAND_SAMPLES);
-        gettimeofday(&time2, NULL);
-        timeData += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        time1 = chrono::steady_clock::now();
+        dataCostCL(im1_mind, warped_mind, costall, m, n, o, len3, step1, hw1, quant1, alpha, RAND_SAMPLES);
+        time2 = chrono::steady_clock::now();
+        timeData += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
         cout << "D" << flush;
-        gettimeofday(&time1, NULL);
+        time1 = chrono::steady_clock::now();
         primsGraph(warped0, ordered, parents, edgemst, step1, m, n, o);
         regularisationCL(costall, u0, v0, w0, u1i, v1i, w1i, hw1, step1, quant1, ordered, parents, edgemst);
-        gettimeofday(&time2, NULL);
-        timeSmooth += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        time2 = chrono::steady_clock::now();
+        timeSmooth += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
         cout << "S" << flush;
 
         cout << "\nTime: MIND=" << timeMIND << ", data=" << timeData << ", MST-reg=" << timeSmooth << ", transf.=" << timeTrans << "\n speed=" << 2.0 * (float)sz1 * (float)len3 / (timeData + timeSmooth) << " dof/s\n";
 
-        gettimeofday(&time1, NULL);
+        time1 = chrono::steady_clock::now();
         consistentMappingCL(u1, v1, w1, u1i, v1i, w1i, m1, n1, o1, step1);
-        gettimeofday(&time2, NULL);
-        float timeMapping = time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        time2 = chrono::steady_clock::now();
+        float timeMapping = chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
 
         // cout<<"Time consistentMapping: "<<timeMapping<<"  \n";
 
@@ -282,8 +285,9 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
     //==========================================================================================
     //==========================================================================================
 
-    gettimeofday(&time2a, NULL);
-    float timeALL = time2a.tv_sec + time2a.tv_usec / 1e6 - (time1a.tv_sec + time1a.tv_usec / 1e6);
+    auto time2a = chrono::steady_clock::now();
+
+    float timeALL = chrono::duration_cast<chrono::duration<float>>(time2a - time1a).count();
 
     upsampleDeformationsCL(ux, vx, wx, u1, v1, w1, m, n, o, m1, n1, o1);
 
@@ -306,5 +310,5 @@ void deeds(float *im1, float *im1b, float *warped1, int m, int n, int o, float a
 
     cout << "SSD before registration: " << SSD0 << " and after " << SSD1 << "\n";
 
-    cout << "Finished. Total time: " << timeALL << " sec. (" << timeDataSmooth << " sec. for MIND+data+reg+trans)" << endl;
+    cout << "Finished. Total time: " << timeALL << " sec." << endl;
 }

@@ -130,7 +130,7 @@ void interp3xyzB(float *datai, float *data, float *datax, float *datay, int len1
     }
 }
 
-void dataCostCL(unsigned long *data, unsigned long *data2, float *results, int m, int n, int o, int len2, int step1, int hw, float quant, float alpha, int randnum)
+void dataCostCL(uint64_t *data, uint64_t *data2, float *results, int m, int n, int o, int len2, int step1, int hw, float quant, float alpha, int randnum)
 {
     cout << "d" << flush;
 
@@ -156,7 +156,7 @@ void dataCostCL(unsigned long *data, unsigned long *data2, float *results, int m
     int np = n + pad2;
     int op = o + pad2;
     int szp = mp * np * op;
-    unsigned long *data2p = new unsigned long[szp];
+    uint64_t *data2p = new uint64_t[szp];
 
     for (int k = 0; k < op; k++)
     {
@@ -200,7 +200,7 @@ void dataCostCL(unsigned long *data, unsigned long *data2, float *results, int m
 
     float alpha1 = 0.5 * alphai / (float)(maxsamp);
 
-    // unsigned long buffer[1000];
+    // uint64_t buffer[1000];
 
 #pragma omp parallel for
     for (int z = 0; z < o1; z++)
@@ -240,9 +240,9 @@ void dataCostCL(unsigned long *data, unsigned long *data2, float *results, int m
                             {
                                 // unsigned int t=buffer[i+j*STEP+k*STEP*STEP]^buf2p[i+j*mp+k*mp*np];
                                 // out1+=(wordbits[t&0xFFFF]+wordbits[t>>16]);
-                                unsigned long t1 = data[i + y1 + (j + x1) * m + (k + z1) * m * n]; // buffer[i+j*step1+k*step1*step1];
-                                unsigned long t2 = data2p[i + j * mp + k * mp * np + (y2 + x2 * mp + z2 * mp * np)];
-                                out1 += __builtin_popcountll(t1 ^ t2);
+                                uint64_t t1 = data[i + y1 + (j + x1) * m + (k + z1) * m * n]; // buffer[i+j*step1+k*step1*step1];
+                                uint64_t t2 = data2p[i + j * mp + k * mp * np + (y2 + x2 * mp + z2 * mp * np)];
+                                out1 += bitset<64>(t1 ^ t2).count();
                             }
                         }
                     }

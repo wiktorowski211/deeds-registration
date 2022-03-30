@@ -159,8 +159,6 @@ void distances(float *im1, float *d1, int m, int n, int o, int qs, int l)
 //__builtin_popcountll(left[i]^right[i]); absolute hamming distances
 void descriptor(uint64_t *mindq, float *im1, int m, int n, int o, int qs)
 {
-    timeval time1, time2;
-
     // MIND with self-similarity context
 
     int dx[6] = {+qs, +qs, -qs, +0, +qs, +0};
@@ -183,11 +181,9 @@ void descriptor(uint64_t *mindq, float *im1, int m, int n, int o, int qs)
     int d = 12;
     int sz1 = m * n * o;
 
-    pthread_t thread1, thread2, thread3;
-
     //============== DISTANCES USING BOXFILTER ===================
     float *d1 = new float[sz1 * len1];
-    gettimeofday(&time1, NULL);
+    auto time1 = chrono::steady_clock::now();
 
 #pragma omp parallel for
     for (int l = 0; l < len1; l++)
@@ -195,14 +191,14 @@ void descriptor(uint64_t *mindq, float *im1, int m, int n, int o, int qs)
         distances(im1, d1, m, n, o, qs, l);
     }
 
-    gettimeofday(&time2, NULL);
-    float timeMIND1 = time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
-    gettimeofday(&time1, NULL);
+    auto time2 = chrono::steady_clock::now();
+    float timeMIND1 = chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
+    time1 = chrono::steady_clock::now();
 
     // quantisation table
     const int val = 6;
 
-    const unsigned long long power = 32;
+    const uint64_t power = 32;
 
 #pragma omp parallel for
     for (int k = 0; k < o; k++)
@@ -241,8 +237,8 @@ void descriptor(uint64_t *mindq, float *im1, int m, int n, int o, int qs)
                 {
                     mind1[l] /= noise1;
                 }
-                unsigned long long accum = 0;
-                unsigned long long tabled1 = 1;
+                uint64_t accum = 0;
+                uint64_t tabled1 = 1;
 
                 for (int l = 0; l < len2; l++)
                 {
@@ -261,7 +257,7 @@ void descriptor(uint64_t *mindq, float *im1, int m, int n, int o, int qs)
         }
     }
 
-    gettimeofday(&time2, NULL);
-    float timeMIND2 = time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+    time2 = chrono::steady_clock::now();
+    float timeMIND2 = chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
     delete d1;
 }

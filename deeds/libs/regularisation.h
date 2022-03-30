@@ -11,7 +11,7 @@ void messageDT(int ind, float *data, short *indout, int len1, float offsetx, flo
 
     int len2 = len1 * len1;
     int len3 = len1 * len1 * len1;
-    float z[len1 * 2 + 1];
+    float *z = new float[len1 * 2 + 1];
 
     float *val;
     float *valout;
@@ -20,12 +20,12 @@ void messageDT(int ind, float *data, short *indout, int len1, float offsetx, flo
     float *valb;
     float *valb2;
 
-    float buffer[len3];
-    float buffer2[len3];
+    float *buffer = new float[len3];
+    float *buffer2 = new float[len3];
     int *indb;
     int *indb2;
-    int bufferi[len3];
-    int bufferi2[len3];
+    int *bufferi = new int[len3];
+    int *bufferi2 = new int[len3];
 
     for (int i = 0; i < len1 * 2 + 1; i++)
     {
@@ -112,6 +112,11 @@ void messageDT(int ind, float *data, short *indout, int len1, float offsetx, flo
             }
         }
     }
+    delete z;
+    delete buffer;
+    delete buffer2;
+    delete bufferi;
+    delete bufferi2;
 }
 
 void regularisationCL(float *costall, float *u0, float *v0, float *w0, float *u1, float *v1, float *w1, int hw, int step1, float quant, int *ordered, int *parents, float *edgemst)
@@ -125,15 +130,13 @@ void regularisationCL(float *costall, float *u0, float *v0, float *w0, float *u1
     int n = n2 / step1;
     int o = o2 / step1;
 
-    timeval time1, time2;
-
     int sz = m * n * o;
     int len = hw * 2 + 1;
     int len1 = len;
     int len2 = len * len * len;
     int len3 = len * len * len;
 
-    gettimeofday(&time1, NULL);
+    auto time1 = chrono::steady_clock::now();
 
     short *allinds = new short[sz * len2];
     float *cost1 = new float[len2];
@@ -198,7 +201,7 @@ void regularisationCL(float *costall, float *u0, float *v0, float *w0, float *u1
         int start = startlev[lev - 1];
         int length = numlev[lev];
 
-        gettimeofday(&time1, NULL);
+        time1 = chrono::steady_clock::now();
 
         for (int i = start; i < start + length; i++)
         {
@@ -220,10 +223,10 @@ void regularisationCL(float *costall, float *u0, float *v0, float *w0, float *u1
             messageDT(ochild, costall, allinds, len1, offsetx, offsety, offsetz);
         }
 
-        gettimeofday(&time2, NULL);
-        timeMessage += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        auto time2 = chrono::steady_clock::now();
+        timeMessage += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
 
-        gettimeofday(&time1, NULL);
+        time1 = chrono::steady_clock::now();
 
         // copy necessary if vectorisation is used (otherwise multiple simultaneous +='s)
         int start0 = startlev[lev - 1];
@@ -240,8 +243,8 @@ void regularisationCL(float *costall, float *u0, float *v0, float *w0, float *u1
             }
         }
 
-        gettimeofday(&time2, NULL);
-        timeCopy += time2.tv_sec + time2.tv_usec / 1e6 - (time1.tv_sec + time1.tv_usec / 1e6);
+        time2 = chrono::steady_clock::now();
+        timeCopy += chrono::duration_cast<chrono::duration<float>>(time2 - time1).count();
     }
 
     // dense displacement space
