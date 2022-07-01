@@ -10,7 +10,7 @@ if platform.system() == 'Windows':
     extra_compile_args = ["/Ox", "/openmp", "/arch:AVX2"]
     extra_link_args = []
 else:
-    extra_compile_args = ["-O3", "-fopenmp", "-mavx2", "-msse4.2", "-std=c++11"]
+    extra_compile_args = ["-O3", "-fopenmp", "-msse4.2", "-std=c++11"]
     extra_link_args = ['-fopenmp']
 
 sourcefiles = ['deeds/registration.pyx', 'deeds/libs/deedsBCV0.cpp']
